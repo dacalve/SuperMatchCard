@@ -13,11 +13,13 @@
 #import "Grid.h"
 
 @interface PlayingCardViewController ()
-@property (weak, nonatomic) IBOutlet PlayingCardView *playingCardView;
+@property (weak, nonatomic) PlayingCardView *playingCardView;
 @property (weak, nonatomic) IBOutlet UIView *boundingView;
 @property (strong, nonatomic) Deck *deck;
 @property (nonatomic) NSUInteger place;
 @property (strong, nonatomic) Grid *grid;
+@property (strong, nonatomic) Grid *portraitGrid;
+@property (strong, nonatomic) Grid *landscapeGrid;
 @property (strong, nonatomic) UIDynamicAnimator *animator;
 
 @property (strong, nonatomic) NSMutableArray *snaps;
@@ -33,6 +35,7 @@
 
 @implementation PlayingCardViewController
 
+#define NUMBER_OF_PLAYING_CARDS 16
 #define DEFAULT_SCALE_FACTOR 0.86
 
 static const CGSize DROP_SIZE = { 60, 80 };
@@ -65,6 +68,28 @@ static const CGSize DROP_SIZE = { 60, 80 };
 {
     if (!_deck) _deck = [[PlayingCardDeck alloc] init];
     return _deck;
+}
+
+- (Grid *)portraitGrid
+{
+    if (!_portraitGrid) {
+        _portraitGrid = [[Grid alloc] init];
+        _portraitGrid.cellAspectRatio = 0.75;//testing 60/80
+        _portraitGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
+        _portraitGrid.minimumNumberOfCells = NUMBER_OF_PLAYING_CARDS;
+    }
+    return _portraitGrid;
+}
+
+- (Grid *)landscapeGrid
+{
+    if (!_landscapeGrid) {
+        _landscapeGrid = [[Grid alloc] init];
+        _landscapeGrid.cellAspectRatio = 0.75;//testing 60/80
+        _landscapeGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
+        _landscapeGrid.minimumNumberOfCells = NUMBER_OF_PLAYING_CARDS;
+    }
+    return _landscapeGrid;
 }
 
 - (void)drawRandomPlayingCard:(PlayingCardView *)cardView
@@ -153,30 +178,13 @@ static const CGSize DROP_SIZE = { 60, 80 };
 
 - (void)tap:(UITapGestureRecognizer *)sender
 {
-    
-    int row = 0;
-    int col = 0;
+    int count = 0;
     for (UIView *view in self.boundingView.subviews) {
-        
-        [UIView transitionWithView:view
-                          duration:.75
-                           options:UIViewAnimationOptionCurveEaseIn
-                        animations:^{
-                            view.center = [self.grid centerOfCellAtRow:row inColumn:col];
-                        }
-                        completion:^(BOOL finished) {
-                            // cleanup viewOld
-                        }
-         ];
-        //increment row and column to process the grid as we process list of views.
-        if(row < self.grid.rowCount) {
-            if (col < self.grid.columnCount-1) {
-                col++;
-            } else {
-                col = 0;
-                row++;
-            }
-        }
+        int row = count/self.grid.columnCount;
+        int col = count%self.grid.columnCount;
+        [self movePlayingCardViewToCenter:(UIView*)view toRow:(int)row andColumn:(int)col];
+        count++;
+
     }
     //At the end remove the tap and all pan gesture recognizers
     if (sender.state == UIGestureRecognizerStateEnded) {
@@ -198,6 +206,11 @@ static const CGSize DROP_SIZE = { 60, 80 };
     self.gatherPoint = CGPointMake(self.boundingView.bounds.size.width/2, self.boundingView.bounds.size.height/2);
 }
 
+- (void)willRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+    NSLog(@"from portrait:%i  from landscape:%i",fromInterfaceOrientation == UIDeviceOrientationPortrait, fromInterfaceOrientation == UIDeviceOrientationLandscapeRight);
+}
+
 - (void)viewDidLayoutSubviews
 {
     NSLog(@"Layout subviews! bounds.width=%f, bounds.height=%f", self.boundingView.bounds.size.width,self.boundingView.bounds.size.height);
@@ -206,64 +219,58 @@ static const CGSize DROP_SIZE = { 60, 80 };
         [self createPlayingCardViews];
         return;
     }
-    //NSUInteger numberOfCells = self.grid.rowCount * self.grid.columnCount;
-    self.grid = nil;
-    self.grid = [[Grid alloc] init];
-    self.grid.cellAspectRatio = 0.75;
-    self.grid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-    
-    //    CGFloat aspectOrientationScaleFactor = (([UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationPortrait) ? 0.75 : 1.0);
-    //    self.grid.minimumNumberOfCells = 12/aspectOrientationScaleFactor;
-    self.grid.minimumNumberOfCells = self.initialCount;
+    self.grid = [self createGrid];
     NSLog(@"min#ofcells=%i,rowcount=%i,colcount=%i", self.grid.minimumNumberOfCells,self.grid.rowCount, self.grid.columnCount);
     if (self.grid.inputsAreValid) {
-        
-        int row = 0;
-        int col = 0;
+    
         int count = 0;
         for (PlayingCardView *view in self.boundingView.subviews) {
-            if (count < self.initialCount)
-            {
-                if (row < self.grid.rowCount) {
-                    if (col < self.grid.columnCount) {
-                        
-                        CGRect frame = [self.grid frameOfCellAtRow:row inColumn:col];
-                        //                        NSLog(@"count=%i, X=%f, Y=%f",count, frame.origin.x, frame.origin.y);
-                        [UIView transitionWithView:view
-                                          duration:.75
-                                           options:UIViewAnimationOptionCurveEaseIn
-                                        animations:^{
-                                            view.frame = frame;
-                                        }
-                                        completion:^(BOOL finished) {
-                                            
-                                        }
-                         ];
-                        col++;
-                    } else {
-                        col = 0;
-                        row++;
-                    }
-                    
-                } //else {
-                //  continue;
-                //}
-            }
+            int row = count/self.grid.columnCount;
+            int col = count%self.grid.columnCount;
+            [self movePlayingCardView:view toRow:row andColumn:col];
             count++;
-            
         }
     } else {
         NSLog(@"Inputs are not valid.");
     }
 }
 
+- (void)movePlayingCardView:(UIView*)view toRow:(int)row andColumn:(int)col
+{
+    NSLog(@"This is row:%i col:%i rowcount:%i colcount:%i",row,col,self.grid.rowCount, self.grid.columnCount);
+    CGRect frame = [self.grid frameOfCellAtRow:row inColumn:col];
+
+    [UIView transitionWithView:view
+                      duration:1.0
+                       options:UIViewAnimationOptionCurveEaseIn
+                    animations:^{
+                        view.frame = frame;
+                    }
+                    completion:^(BOOL finished) {
+                        
+                    }
+     ];
+}
+
+- (void)movePlayingCardViewToCenter:(UIView*)view toRow:(int)row andColumn:(int)col
+{
+    NSLog(@"This is row:%i col:%i rowcount:%i colcount:%i",row,col,self.grid.rowCount, self.grid.columnCount);
+    
+    [UIView transitionWithView:view
+                      duration:1.0
+                       options:UIViewAnimationOptionCurveEaseIn
+                    animations:^{
+                        view.center = [self.grid centerOfCellAtRow:row inColumn:col];
+                    }
+                    completion:^(BOOL finished) {
+                        // cleanup viewOld
+                    }
+     ];
+}
+
 - (void)createPlayingCardViews
 {
-    self.grid = nil;
-    self.grid = [[Grid alloc] init];
-    self.grid.cellAspectRatio = 0.75;//testing 60/80
-    self.grid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-    self.grid.minimumNumberOfCells = 12/0.75;
+    self.grid = [self createGrid];
     if (self.grid.inputsAreValid) {
         for (NSUInteger row = 0; row < self.grid.rowCount; row++) {
             for (NSUInteger col = 0; col < self.grid.columnCount; col++) {
@@ -273,6 +280,17 @@ static const CGSize DROP_SIZE = { 60, 80 };
     }
     self.initialCount = self.grid.rowCount * self.grid.columnCount;
 }
+
+- (Grid *)createGrid
+{
+    if (UIDeviceOrientationIsLandscape([UIDevice currentDevice].orientation))
+    {
+        return self.landscapeGrid;
+    }
+    return self.portraitGrid;
+}
+
+
 
 - (void)dropWithFrame:(CGRect)frame
 {
@@ -320,5 +338,6 @@ static const CGSize DROP_SIZE = { 60, 80 };
     
     [self.boundingView addSubview:dropView];
 }
+
 
 @end

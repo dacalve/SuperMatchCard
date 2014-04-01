@@ -17,7 +17,6 @@
 @property (weak, nonatomic) IBOutlet UIView *boundingView;
 @property (strong, nonatomic) Deck *deck;
 @property (nonatomic) NSUInteger place;
-@property (strong, nonatomic) Grid *grid;
 @property (strong, nonatomic) Grid *portraitGrid;
 @property (strong, nonatomic) Grid *landscapeGrid;
 @property (strong, nonatomic) UIDynamicAnimator *animator;
@@ -85,11 +84,51 @@ static const CGSize DROP_SIZE = { 60, 80 };
 {
     if (!_landscapeGrid) {
         _landscapeGrid = [[Grid alloc] init];
-        _landscapeGrid.cellAspectRatio = 0.75;//testing 60/80
+        _landscapeGrid.cellAspectRatio = 0.75;
         _landscapeGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
         _landscapeGrid.minimumNumberOfCells = NUMBER_OF_PLAYING_CARDS;
     }
     return _landscapeGrid;
+}
+
+- (IBAction)deal:(id)sender
+{
+    NSMutableArray *pointsToReplace = [self getAllPointsToReplace];
+    [self replaceCards:pointsToReplace];
+}
+
+- (void)replaceCards:(NSMutableArray *)pointsToReplace
+{
+    for (NSValue *pointValue in pointsToReplace) {
+        NSIntegerPoint point;
+        [pointValue getValue:&point];
+        
+        [self removeCardAtRow:point.x column:point.y];
+        
+        [self dropWithFrame:[self.grid frameOfCellAtRow:point.x inColumn:point.y]];
+    }
+}
+
+- (void)removeCardAtRow:(NSUInteger)row column:(NSUInteger)col
+{
+    //find view in boundingView
+    CGPoint hitPoint = [self.grid centerOfCellAtRow:row inColumn:col];
+    
+    UIView *viewToRemove = [self.boundingView hitTest:hitPoint withEvent:nil];
+    //remove from superview
+    if ([viewToRemove isKindOfClass:[PlayingCardView class]]) {
+        [UIView transitionWithView:viewToRemove
+                          duration:.75
+                           options:UIViewAnimationOptionCurveEaseIn
+                        animations:^{
+                            CGPoint vanishingPoint = CGPointMake(50.0, -50.0);
+                            viewToRemove.center = vanishingPoint;
+                        }
+                        completion:^(BOOL finished) {
+                            [viewToRemove removeFromSuperview];
+                        }
+         ];
+    }
 }
 
 - (void)drawRandomPlayingCard:(PlayingCardView *)cardView
@@ -339,5 +378,39 @@ static const CGSize DROP_SIZE = { 60, 80 };
     [self.boundingView addSubview:dropView];
 }
 
+- (NSMutableArray *)getAllPointsToReplace
+{
+    NSMutableArray *pointsToReplace = [[NSMutableArray alloc] init];
+    for (int row = 0; row < self.grid.rowCount; row++) {
+        for (int col = 0; col < self.grid.columnCount; col++) {
+            NSIntegerPoint pointToReplace = NSIntegerPointMake(row, col);
+            NSValue *pointObj = [NSValue value:&pointToReplace withObjCType:@encode(NSIntegerPoint)];
+            [pointsToReplace addObject:pointObj];
+        }
+    }
+    return pointsToReplace;
+}
 
+#pragma mark - C Functions
+
+struct NSIntegerPoint {
+    NSInteger x;
+    NSInteger y;
+};
+typedef struct NSIntegerPoint NSIntegerPoint;
+
+CG_INLINE NSIntegerPoint
+NSIntegerPointMake(NSInteger x, NSInteger y)
+{
+    struct NSIntegerPoint point;
+    point.x = x;
+    point.y = y;
+    return point;
+}
+
+CG_INLINE bool
+NSIntegerPointEqualToPoint(NSIntegerPoint point1, NSIntegerPoint point2)
+{
+    return point1.x == point2.x && point1.y == point2.y;
+}
 @end

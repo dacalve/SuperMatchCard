@@ -10,4 +10,6 @@
 
 @interface SetCardViewController : CardViewController
 
+- (IBAction)replaceThreeCards:(id)sender;
+
 @end

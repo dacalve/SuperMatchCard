@@ -7,7 +7,13 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "Grid.h"
 
 @interface CardViewController : UIViewController
+
+@property (strong, nonatomic) Grid *grid;
+
+- (IBAction)deal:(id)sender;
+
 
 @end

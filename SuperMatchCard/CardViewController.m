@@ -8,11 +8,15 @@
 
 #import "CardViewController.h"
 
+
 @interface CardViewController ()
 
 @end
 
 @implementation CardViewController
+
+#define DEFAULT_ASPECT_RATIO 1.0
+#define DEFAULT_NUMBER_OF_CARDS 12
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
@@ -29,10 +33,29 @@
 	// Do any additional setup after loading the view.
 }
 
-- (void)didReceiveMemoryWarning
+//- (Grid *)portraitGrid
+//{
+//    if (!_portraitGrid) {
+//        _portraitGrid = [[Grid alloc] init];
+//        _portraitGrid.cellAspectRatio = DEFAULT_ASPECT_RATIO;
+//        _portraitGrid.minimumNumberOfCells = DEFAULT_NUMBER_OF_CARDS;
+//    }
+//    return _portraitGrid;
+//}
+
+//- (Grid *)landscapeGrid
+//{
+//    if (!_landscapeGrid) {
+//        _landscapeGrid = [[Grid alloc] init];
+//        _landscapeGrid.cellAspectRatio = DEFAULT_ASPECT_RATIO;
+//        _landscapeGrid.minimumNumberOfCells = DEFAULT_NUMBER_OF_CARDS;
+//    }
+//    return _landscapeGrid;
+//}
+
+- (IBAction)deal:(id)sender
 {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+    
 }
 
 @end

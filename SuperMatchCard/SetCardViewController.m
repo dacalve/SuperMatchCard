@@ -14,24 +14,54 @@
 
 @interface SetCardViewController ()
 @property (weak, nonatomic) IBOutlet UIView *boundingView;
-@property (weak, nonatomic) IBOutlet SetCardView *setCardView;
-@property (strong, nonatomic) Grid *grid;
+@property (weak, nonatomic) SetCardView *setCardView;
 @property (strong, nonatomic) SetCardDeck *deck;
-
-
+@property (strong, nonatomic) Grid *portraitGrid;
+@property (strong, nonatomic) Grid *landscapeGrid;
 @end
 
 @implementation SetCardViewController
 
+#define NUMBER_OF_SET_CARDS 16
+#define NUMBER_OF_CARDS_TO_REPLACE 3
+
 - (IBAction)replaceThreeCards:(id)sender {
     [self unselectCards];
-    [self replaceCards];
+    NSMutableArray *pointsToReplace = [self getRandomPointsToReplace];
+    [self replaceCards:pointsToReplace];
+}
+
+- (IBAction)deal:(id)sender {
+    NSMutableArray *pointsToReplace = [self getAllPointsToReplace];
+    [self replaceCards:pointsToReplace];
 }
 
 - (Deck *)deck
 {
     if (!_deck) _deck = [[SetCardDeck alloc] init];
     return _deck;
+}
+
+- (Grid *)portraitGrid
+{
+    if (!_portraitGrid) {
+        _portraitGrid = [[Grid alloc] init];
+        _portraitGrid.cellAspectRatio = 1.0;//square cards;
+        _portraitGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
+        _portraitGrid.minimumNumberOfCells = NUMBER_OF_SET_CARDS;
+    }
+    return _portraitGrid;
+}
+
+- (Grid *)landscapeGrid
+{
+    if (!_landscapeGrid) {
+        _landscapeGrid = [[Grid alloc] init];
+        _landscapeGrid.cellAspectRatio = 1.0;//square cards
+        _landscapeGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
+        _landscapeGrid.minimumNumberOfCells = NUMBER_OF_SET_CARDS;
+    }
+    return _landscapeGrid;
 }
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
@@ -56,60 +86,59 @@
         return;
     }
     
-    self.grid = nil;
-    self.grid = [[Grid alloc] init];
-    self.grid.cellAspectRatio = 1.0;
-    self.grid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-    self.grid.minimumNumberOfCells = 12;
-    
+    self.grid = [self createGrid];
     
     if (self.grid.inputsAreValid) {
-        
-        int row = 0;
-        int col = 0;
+
+        int count = 0;
         for (SetCardView *view in self.boundingView.subviews) {
-            CGRect frame = [self.grid frameOfCellAtRow:row inColumn:col];
-            [UIView transitionWithView:view
-                              duration:.75
-                               options:UIViewAnimationOptionCurveEaseIn
-                            animations:^{
-                                view.frame = frame;
-                            }
-                            completion:^(BOOL finished) {
-                                
-                            }
-             ];
-            
-            
             //increment row and column to process the grid as we process list of views.
-            if(row < self.grid.rowCount) {
-                if (col < self.grid.columnCount-1) {
-                    col++;
-                } else {
-                    col = 0;
-                    row++;
-                }
-            }
+            int row = count/self.grid.columnCount;
+            int col = count%self.grid.columnCount;
+            [self moveSetCardView:view toRow:row andColumn:col];
+            count++;
         }
     } else {
         NSLog(@"Inputs are not valid.");
     }
 }
 
+- (void)moveSetCardView:(UIView*)view toRow:(int)row andColumn:(int)col
+{
+    NSLog(@"This is row:%i col:%i rowcount:%i colcount:%i",row,col,self.grid.rowCount, self.grid.columnCount);
+    
+    CGRect frame = [self.grid frameOfCellAtRow:row inColumn:col];
+    [UIView transitionWithView:view
+                      duration:.75
+                       options:UIViewAnimationOptionCurveEaseIn
+                    animations:^{
+                        view.frame = frame;
+                    }
+                    completion:^(BOOL finished) {
+                        
+                    }
+     ];
+}
+
 - (void)createSetCardViews
 {
-    self.grid = [[Grid alloc] init];
-    self.grid.cellAspectRatio = 1.0;
-    self.grid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-    self.grid.minimumNumberOfCells = 12;
+    self.grid = [self createGrid];
     if (self.grid.inputsAreValid) {
         for (NSUInteger row = 0; row < self.grid.rowCount; row++) {
             for (NSUInteger col = 0; col < self.grid.columnCount; col++) {
                 [self dropWithFrame:[self.grid frameOfCellAtRow:row inColumn:col]];
-                
             }
         }
     }
+}
+
+- (Grid *)createGrid
+{
+    if (UIDeviceOrientationIsLandscape([UIDevice currentDevice].orientation))
+    {
+        return self.landscapeGrid;
+    }
+    return self.portraitGrid;
 }
 
 - (void)dropWithFrame:(CGRect)frame
@@ -150,56 +179,7 @@
      ];
 }
 
-
-
-- (void)removeCardAtRow:(NSUInteger)row column:(NSUInteger)col
-{
-    //find view in boundingView
-    CGPoint hitPoint = [self.grid centerOfCellAtRow:row inColumn:col];
-    
-    UIView *viewToRemove = [self.boundingView hitTest:hitPoint withEvent:nil];
-    //remove from superview
-    if ([viewToRemove isKindOfClass:[SetCardView class]]) {
-        [UIView transitionWithView:viewToRemove
-                          duration:.75
-                           options:UIViewAnimationOptionCurveEaseIn
-                        animations:^{
-                            CGPoint vanishingPoint = CGPointMake(50.0, -50.0);
-                            viewToRemove.center = vanishingPoint;
-                        }
-                        completion:^(BOOL finished) {
-                            [viewToRemove removeFromSuperview];
-                        }
-         ];
-    }
-}
-
-#pragma mark - Interface
-
-#define NUMBER_OF_CARDS_TO_REPLACE 3
-
-struct NSIntegerPoint {
-    NSInteger x;
-    NSInteger y;
-};
-typedef struct NSIntegerPoint NSIntegerPoint;
-
-CG_INLINE NSIntegerPoint
-NSIntegerPointMake(NSInteger x, NSInteger y)
-{
-    struct NSIntegerPoint point;
-    point.x = x;
-    point.y = y;
-    return point;
-}
-
-CG_INLINE bool
-NSIntegerPointEqualToPoint(NSIntegerPoint point1, NSIntegerPoint point2)
-{
-    return point1.x == point2.x && point1.y == point2.y;
-}
-
-- (NSMutableArray *)findPointsToReplace
+- (NSMutableArray *)getRandomPointsToReplace
 {
     int countOfCards = 0;
     NSMutableArray *pointsToReplace = [[NSMutableArray alloc] init];
@@ -224,9 +204,30 @@ NSIntegerPointEqualToPoint(NSIntegerPoint point1, NSIntegerPoint point2)
     return pointsToReplace;
 }
 
-- (void)replaceCards
+- (void)removeCardAtRow:(NSUInteger)row column:(NSUInteger)col
 {
-    NSMutableArray *pointsToReplace = [self findPointsToReplace];
+    //find view in boundingView
+    CGPoint hitPoint = [self.grid centerOfCellAtRow:row inColumn:col];
+    
+    UIView *viewToRemove = [self.boundingView hitTest:hitPoint withEvent:nil];
+    //remove from superview
+    if ([viewToRemove isKindOfClass:[SetCardView class]]) {
+        [UIView transitionWithView:viewToRemove
+                          duration:.75
+                           options:UIViewAnimationOptionCurveEaseIn
+                        animations:^{
+                            CGPoint vanishingPoint = CGPointMake(50.0, -50.0);
+                            viewToRemove.center = vanishingPoint;
+                        }
+                        completion:^(BOOL finished) {
+                            [viewToRemove removeFromSuperview];
+                        }
+         ];
+    }
+}
+
+- (void)replaceCards:(NSMutableArray *)pointsToReplace
+{
     for (NSValue *pointValue in pointsToReplace) {
         NSIntegerPoint point;
         [pointValue getValue:&point];
@@ -256,6 +257,18 @@ NSIntegerPointEqualToPoint(NSIntegerPoint point1, NSIntegerPoint point2)
                  ];
             }
         }
+    }
+}
+
+- (void)drawRandomSetCard:(SetCardView *)cardView
+{
+    Card *card = [self.deck drawRandomCard];
+    if ([card isKindOfClass:[SetCard class]]) {
+        SetCard *setCard = (SetCard *)card;
+        cardView.number = setCard.number;
+        cardView.color = setCard.color;
+        cardView.figure = setCard.figure;
+        cardView.shade = setCard.shade;
     }
 }
 
@@ -297,22 +310,41 @@ NSIntegerPointEqualToPoint(NSIntegerPoint point1, NSIntegerPoint point2)
     }
 }
 
-- (void)drawRandomSetCard:(SetCardView *)cardView
+- (NSMutableArray *)getAllPointsToReplace
 {
-    Card *card = [self.deck drawRandomCard];
-    if ([card isKindOfClass:[SetCard class]]) {
-        SetCard *setCard = (SetCard *)card;
-        cardView.number = setCard.number;
-        cardView.color = setCard.color;
-        cardView.figure = setCard.figure;
-        cardView.shade = setCard.shade;
+    NSMutableArray *pointsToReplace = [[NSMutableArray alloc] init];
+    for (int row = 0; row < self.grid.rowCount; row++) {
+        for (int col = 0; col < self.grid.columnCount; col++) {
+            NSIntegerPoint pointToReplace = NSIntegerPointMake(row, col);
+            NSValue *pointObj = [NSValue value:&pointToReplace withObjCType:@encode(NSIntegerPoint)];
+            [pointsToReplace addObject:pointObj];
+        }
     }
+    return pointsToReplace;
 }
 
-- (void)didReceiveMemoryWarning
+#pragma mark - C Functions
+
+struct NSIntegerPoint {
+    NSInteger x;
+    NSInteger y;
+};
+typedef struct NSIntegerPoint NSIntegerPoint;
+
+CG_INLINE NSIntegerPoint
+NSIntegerPointMake(NSInteger x, NSInteger y)
 {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+    struct NSIntegerPoint point;
+    point.x = x;
+    point.y = y;
+    return point;
 }
+
+CG_INLINE bool
+NSIntegerPointEqualToPoint(NSIntegerPoint point1, NSIntegerPoint point2)
+{
+    return point1.x == point2.x && point1.y == point2.y;
+}
+
 
 @end

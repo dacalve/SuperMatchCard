@@ -34,7 +34,7 @@
 
 @implementation PlayingCardViewController
 
-#define NUMBER_OF_PLAYING_CARDS 16
+#define NUMBER_OF_PLAYING_CARDS 12
 #define DEFAULT_SCALE_FACTOR 0.86
 
 static const CGSize DROP_SIZE = { 60, 80 };

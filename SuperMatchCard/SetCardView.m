@@ -39,6 +39,7 @@ static NSString* const UNFILLED = @"unfilled";
     self.backgroundColor = nil;
     self.opaque = NO;
     self.contentMode = UIViewContentModeRedraw;
+    self.card = [[SetCard alloc] init];
 }
 
 - (void)awakeFromNib

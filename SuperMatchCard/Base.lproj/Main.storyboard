@@ -95,6 +95,7 @@
                     <navigationItem key="navigationItem" id="fJB-ZH-5XQ"/>
                     <connections>
                         <outlet property="boundingView" destination="Vur-iB-KP0" id="fTQ-cG-VAd"/>
+                        <outlet property="scoreLabel" destination="zy4-kR-Fiy" id="kLv-cN-a0q"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Vd1-O9-GGa" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -159,6 +160,7 @@
                     <navigationItem key="navigationItem" id="32a-26-uLl"/>
                     <connections>
                         <outlet property="boundingView" destination="gZw-mz-rce" id="DxO-2y-HkL"/>
+                        <outlet property="scoreLabel" destination="Hcd-qA-eQO" id="lTt-jw-F2A"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="5WO-Qd-jcf" userLabel="First Responder" sceneMemberID="firstResponder"/>

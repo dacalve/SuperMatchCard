@@ -7,13 +7,18 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "CardMatchingGame.h"
 #import "Grid.h"
 
 @interface CardViewController : UIViewController
-
+@property (strong, nonatomic) CardMatchingGame *game;
 @property (strong, nonatomic) Grid *grid;
+@property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
 
 - (IBAction)deal:(id)sender;
 
+- (Deck *)createDeck; //abstract method
+
+- (void)updateUI;
 
 @end

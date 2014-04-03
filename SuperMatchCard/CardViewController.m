@@ -11,6 +11,7 @@
 
 @interface CardViewController ()
 
+
 @end
 
 @implementation CardViewController
@@ -33,29 +34,30 @@
 	// Do any additional setup after loading the view.
 }
 
-//- (Grid *)portraitGrid
-//{
-//    if (!_portraitGrid) {
-//        _portraitGrid = [[Grid alloc] init];
-//        _portraitGrid.cellAspectRatio = DEFAULT_ASPECT_RATIO;
-//        _portraitGrid.minimumNumberOfCells = DEFAULT_NUMBER_OF_CARDS;
-//    }
-//    return _portraitGrid;
-//}
+-(CardMatchingGame *)game
+{
+    if (!_game) {
+        _game = [[CardMatchingGame alloc] init];
+//        _game = [[CardMatchingGame alloc] initWithCardCount:[self.cardButtons count] usingDeck:[self createDeck]];
+        
+//      self.history = [[NSMutableArray alloc] init];//track history of card choices.
+    }
+    return _game;
+}
 
-//- (Grid *)landscapeGrid
-//{
-//    if (!_landscapeGrid) {
-//        _landscapeGrid = [[Grid alloc] init];
-//        _landscapeGrid.cellAspectRatio = DEFAULT_ASPECT_RATIO;
-//        _landscapeGrid.minimumNumberOfCells = DEFAULT_NUMBER_OF_CARDS;
-//    }
-//    return _landscapeGrid;
-//}
+-(Deck *) createDeck //abstract method
+{
+    return nil;
+}
 
 - (IBAction)deal:(id)sender
 {
-    
+    //abstract method
+}
+
+-(void) updateUI
+{
+    self.scoreLabel.text = [NSString stringWithFormat:@"Score: %d",self.game.score];
 }
 
 @end

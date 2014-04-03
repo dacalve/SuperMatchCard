@@ -244,6 +244,7 @@
         if ([view isKindOfClass:[SetCardView class]]) {
             
             SetCardView *setCardView = (SetCardView *)view;
+
             if (setCardView.isChosen) {
                 [UIView transitionWithView:setCardView
                                   duration:.75
@@ -278,17 +279,28 @@
 {
     SetCardView *cardView = (SetCardView *)(sender.view);
     if (cardView) {
-        
+        NSMutableArray *cards = [[NSMutableArray alloc] init];
+        for (SetCardView *setCardView in self.boundingView.subviews) {
+            if (setCardView.isChosen) {
+                [cards addObject:setCardView];
+            }
+        }
+
         [UIView transitionWithView:cardView
                           duration:.75
                            options:UIViewAnimationOptionCurveEaseIn
                         animations:^{
-                            [cardView setAlpha:0.25];
+                            if (cardView.chosen) {
+                                [cardView setAlpha:1.0];
+                            } else {
+                                [cardView setAlpha:0.25];
+                            }
                         }
                         completion:^(BOOL finished) {
-                            cardView.chosen = YES;
+                            cardView.chosen = !cardView.chosen;
                         }
          ];
+
     }
 }
 
@@ -304,7 +316,7 @@
                             [cardView setAlpha:0.25];
                         }
                         completion:^(BOOL finished) {
-                            cardView.chosen = YES;
+                            cardView.chosen = !cardView.chosen;
                         }
          ];
     }

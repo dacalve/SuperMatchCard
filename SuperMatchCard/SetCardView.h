@@ -7,6 +7,7 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "SetCard.h"
 
 @interface SetCardView : UIView
 
@@ -16,6 +17,8 @@
 @property (nonatomic) NSString *shade; //number of shapes (solid, striped, unfilled)
 @property (nonatomic) BOOL faceUp;
 @property (nonatomic, getter = isChosen) BOOL chosen;
+
+@property (strong, nonatomic) SetCard *card;
 
 
 @end

@@ -16,14 +16,21 @@
 @property (weak, nonatomic) IBOutlet UIView *boundingView;
 @property (weak, nonatomic) SetCardView *setCardView;
 @property (strong, nonatomic) SetCardDeck *deck;
-@property (strong, nonatomic) Grid *portraitGrid;
-@property (strong, nonatomic) Grid *landscapeGrid;
+
 @end
 
 @implementation SetCardViewController
 
 #define NUMBER_OF_SET_CARDS 16
 #define NUMBER_OF_CARDS_TO_REPLACE 3
+#define SET_CARD_ASPECT_RATIO 1.0
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.aspectRatio = SET_CARD_ASPECT_RATIO;
+    self.numberOfCards = NUMBER_OF_SET_CARDS;
+}
 
 - (IBAction)replaceThreeCards:(id)sender {
     [self unselectCards];
@@ -32,8 +39,7 @@
 }
 
 - (IBAction)deal:(id)sender {
-    NSMutableArray *pointsToReplace = [self getAllPointsToReplace];
-    [self replaceCards:pointsToReplace];
+
 }
 
 - (Deck *)deck
@@ -42,68 +48,7 @@
     return _deck;
 }
 
-- (Grid *)portraitGrid
-{
-    if (!_portraitGrid) {
-        _portraitGrid = [[Grid alloc] init];
-        _portraitGrid.cellAspectRatio = 1.0;//square cards;
-        _portraitGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-        _portraitGrid.minimumNumberOfCells = NUMBER_OF_SET_CARDS;
-    }
-    return _portraitGrid;
-}
-
-- (Grid *)landscapeGrid
-{
-    if (!_landscapeGrid) {
-        _landscapeGrid = [[Grid alloc] init];
-        _landscapeGrid.cellAspectRatio = 1.0;//square cards
-        _landscapeGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-        _landscapeGrid.minimumNumberOfCells = NUMBER_OF_SET_CARDS;
-    }
-    return _landscapeGrid;
-}
-
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
-{
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    if (self) {
-        
-    }
-    return self;
-}
-
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-}
-
-- (void)viewDidLayoutSubviews
-{
-    NSLog(@"Layout subviews! bounds.width=%f, bounds.height=%f", self.boundingView.bounds.size.width,self.boundingView.bounds.size.height);
-    if ([self.boundingView.subviews count] == 0) {
-        [self createSetCardViews];
-        return;
-    }
-    
-    self.grid = [self createGrid];
-    
-    if (self.grid.inputsAreValid) {
-
-        int count = 0;
-        for (SetCardView *view in self.boundingView.subviews) {
-            //increment row and column to process the grid as we process list of views.
-            int row = count/self.grid.columnCount;
-            int col = count%self.grid.columnCount;
-            [self moveSetCardView:view toRow:row andColumn:col];
-            count++;
-        }
-    } else {
-        NSLog(@"Inputs are not valid.");
-    }
-}
-
-- (void)moveSetCardView:(UIView*)view toRow:(int)row andColumn:(int)col
+- (void)moveSetCardView:(UIView *)view toRow:(int)row andColumn:(int)col
 {
     NSLog(@"This is row:%i col:%i rowcount:%i colcount:%i",row,col,self.grid.rowCount, self.grid.columnCount);
     
@@ -118,27 +63,6 @@
                         
                     }
      ];
-}
-
-- (void)createSetCardViews
-{
-    self.grid = [self createGrid];
-    if (self.grid.inputsAreValid) {
-        for (NSUInteger row = 0; row < self.grid.rowCount; row++) {
-            for (NSUInteger col = 0; col < self.grid.columnCount; col++) {
-                [self dropWithFrame:[self.grid frameOfCellAtRow:row inColumn:col]];
-            }
-        }
-    }
-}
-
-- (Grid *)createGrid
-{
-    if (UIDeviceOrientationIsLandscape([UIDevice currentDevice].orientation))
-    {
-        return self.landscapeGrid;
-    }
-    return self.portraitGrid;
 }
 
 - (void)dropWithFrame:(CGRect)frame
@@ -193,7 +117,7 @@
             NSIntegerPoint point;
             [pointValue getValue:&point];
             if (NSIntegerPointEqualToPoint(point, pointToReplace)) {
-                continue;
+                continue; //try another random row/col point
             }
         }
         
@@ -210,7 +134,11 @@
     CGPoint hitPoint = [self.grid centerOfCellAtRow:row inColumn:col];
     
     UIView *viewToRemove = [self.boundingView hitTest:hitPoint withEvent:nil];
-    //remove from superview
+    [self removeCardView:viewToRemove];
+}
+
+- (void)removeCardView:(UIView *)viewToRemove
+{
     if ([viewToRemove isKindOfClass:[SetCardView class]]) {
         [UIView transitionWithView:viewToRemove
                           duration:.75
@@ -254,6 +182,8 @@
                                 }
                                 completion:^(BOOL finished) {
                                     setCardView.chosen = NO;
+                                    setCardView.card.chosen = NO;
+                                    setCardView.card.matched = NO;
                                 }
                  ];
             }
@@ -266,10 +196,11 @@
     Card *card = [self.deck drawRandomCard];
     if ([card isKindOfClass:[SetCard class]]) {
         SetCard *setCard = (SetCard *)card;
-        cardView.number = setCard.number;
-        cardView.color = setCard.color;
-        cardView.figure = setCard.figure;
-        cardView.shade = setCard.shade;
+        cardView.card = setCard;
+        //cardView.number = setCard.number;
+        //cardView.color = setCard.color;
+        //cardView.figure = setCard.figure;
+        //cardView.shade = setCard.shade;
     }
 }
 
@@ -277,15 +208,29 @@
 
 - (IBAction)swipe:(UILongPressGestureRecognizer *)sender
 {
+    if (sender.state == UIGestureRecognizerStateEnded) {
+        [self transitionCardSelection:sender];
+    }
+}
+
+- (IBAction)longPress:(UILongPressGestureRecognizer *)sender
+{
+    if (sender.state == UIGestureRecognizerStateEnded) {
+        [self transitionCardSelection:sender];
+    }
+
+}
+
+- (void)transitionCardSelection:(UILongPressGestureRecognizer *)sender
+{
     SetCardView *cardView = (SetCardView *)(sender.view);
     if (cardView) {
-        NSMutableArray *cards = [[NSMutableArray alloc] init];
+        NSMutableArray *workingCardViews = [[NSMutableArray alloc] init];
         for (SetCardView *setCardView in self.boundingView.subviews) {
             if (setCardView.isChosen) {
-                [cards addObject:setCardView];
+                [workingCardViews addObject:setCardView];
             }
         }
-
         [UIView transitionWithView:cardView
                           duration:.75
                            options:UIViewAnimationOptionCurveEaseIn
@@ -295,53 +240,52 @@
                             } else {
                                 [cardView setAlpha:0.25];
                             }
-                        }
-                        completion:^(BOOL finished) {
                             cardView.chosen = !cardView.chosen;
                         }
-         ];
-
-    }
-}
-
-- (IBAction)longPress:(UILongPressGestureRecognizer *)sender
-{
-    SetCardView *cardView = (SetCardView *)(sender.view);
-    if (cardView) {
-        
-        [UIView transitionWithView:cardView
-                          duration:.75
-                           options:UIViewAnimationOptionCurveEaseIn
-                        animations:^{
-                            [cardView setAlpha:0.25];
-                        }
                         completion:^(BOOL finished) {
-                            cardView.chosen = !cardView.chosen;
+                            if (finished && cardView.chosen){
+                                [self completeSelectedCardTransition:workingCardViews withCardView:cardView];
+                                
+                            }
                         }
          ];
     }
 }
 
-- (NSMutableArray *)getAllPointsToReplace
+- (void)completeSelectedCardTransition:(NSMutableArray *)workingCardViews withCardView:(SetCardView *)cardView
 {
-    NSMutableArray *pointsToReplace = [[NSMutableArray alloc] init];
-    for (int row = 0; row < self.grid.rowCount; row++) {
-        for (int col = 0; col < self.grid.columnCount; col++) {
-            NSIntegerPoint pointToReplace = NSIntegerPointMake(row, col);
-            NSValue *pointObj = [NSValue value:&pointToReplace withObjCType:@encode(NSIntegerPoint)];
-            [pointsToReplace addObject:pointObj];
+    if ([workingCardViews count] != 2) {
+        return; //Don't do anything until 3rd card is selected.
+    }
+    NSMutableArray *cards = [[NSMutableArray alloc] init];
+    for (SetCardView *view in workingCardViews) {
+        [cards addObject:view.card];
+    }
+    [self.game match:cards withCard:cardView.card];
+    
+    
+    if (self.game.lastScore > 0) {
+        //replace cardviews with new cardviews
+        [workingCardViews addObject:cardView];//add currently selected card to cards to replace.
+        for (SetCardView *setCardView in workingCardViews) {
+            CGRect replaceFrame = setCardView.frame;
+            [self removeCardView:setCardView];
+            //Add a new card to the existing frame
+            [self dropWithFrame:replaceFrame]; //will the view remain in memory if I use its frame?
         }
+
+        //update scoreLabel
+        [self updateUI];
+
+    } else {
+        //if 3 cards selected, unselect all cards
+        [self unselectCards];
+        NSLog(@"Not a match!");
     }
-    return pointsToReplace;
 }
+
 
 #pragma mark - C Functions
-
-struct NSIntegerPoint {
-    NSInteger x;
-    NSInteger y;
-};
-typedef struct NSIntegerPoint NSIntegerPoint;
 
 CG_INLINE NSIntegerPoint
 NSIntegerPointMake(NSInteger x, NSInteger y)

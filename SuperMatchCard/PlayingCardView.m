@@ -40,6 +40,14 @@
     [self setNeedsDisplay];
 }
 
+- (void)setCard:(PlayingCard *)card
+{
+    _card = card;
+    self.suit = card.suit;
+    self.rank = card.rank;
+    [self setNeedsDisplay];
+}
+
 - (void)setSuit:(NSString *)suit
 {
     _suit = suit;
@@ -73,21 +81,6 @@
         gesture.scale = 1.0;
     }
 }
-
-//- (void)swipe:(UISwipeGestureRecognizer *)gesture
-//{
-//    if (gesture.state == UIGestureRecognizerStateEnded) {
-//        
-//        if (!self.faceUp)
-//        {
-//            [self.controller drawRandomPlayingCard:self];
-//
-//        } else {
-//            self.faceUp = !self.faceUp;
-//        }
-//    }
-//    
-//}
 
 #pragma mark - Drawing
 

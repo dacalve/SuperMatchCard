@@ -13,17 +13,17 @@
 @interface CardMatchingGame : NSObject
 
 //designated initializer
-- (instancetype)initWithCardCount:(NSUInteger)count usingDeck:(Deck *)deck;
+//- (instancetype)initWithCardCount:(NSUInteger)count usingDeck:(Deck *)deck;
 
-- (void)chooseCardAtIndex:(NSUInteger)index;
+- (void)match:(NSMutableArray *)workingCards withCard:(Card *)card;
 
-- (Card *)cardAtIndex:(NSUInteger)index;
+//- (Card *)cardAtIndex:(NSUInteger)index;
 
 - (void)matchMode:(NSUInteger)cardsToMatch usingMultiPassMatch:(BOOL)multiPassMatch;
 
 @property (nonatomic, readonly) NSInteger score;
 @property (nonatomic, readonly)NSInteger lastScore;
-@property (nonatomic, readonly) NSArray *currentCards;
+//@property (nonatomic, readonly) NSArray *currentCards;
 @property (nonatomic) NSUInteger howManyCardsToMatch;
 
 @end

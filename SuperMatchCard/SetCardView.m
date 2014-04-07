@@ -76,6 +76,16 @@ static NSString* const UNFILLED = @"unfilled";
     [self setNeedsDisplay];
 }
 
+- (void)setCard:(SetCard *)card
+{
+    _card = card;
+    self.number = card.number;
+    self.color = card.color;
+    self.figure = card.figure;
+    self.shade = card.shade;
+    [self setNeedsDisplay];
+}
+
 - (void)setNumber:(NSUInteger)number
 {
     _number = number;

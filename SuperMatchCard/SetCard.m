@@ -45,10 +45,18 @@
 -(int) match:(NSArray *)otherCards
 {
     int score = 0;
+    BOOL sameNumber = YES;
     BOOL sameColor = YES;
     BOOL sameFigure = YES;
     BOOL sameShading = YES;
     //each feature must be all the same or all different.
+    //is same number?
+    for (SetCard *otherCard in otherCards) {
+        if (!(otherCard.number == self.number)) {
+            sameNumber = NO;
+            break;
+        }
+    }
     //is same color?
     for (SetCard *otherCard in otherCards) {
         if (![self compareColor:self.color toSecondColor:otherCard.color]) {
@@ -65,25 +73,28 @@
     }
     //is same number?
     for (SetCard *otherCard in otherCards) {
-        if (!([otherCard.shade intValue] == [self.shade intValue])) {
+        if (!([otherCard.shade isEqualToString:self.shade])) {
             sameShading = NO;
             break;
         }
     }
     
+    if (sameNumber) {
+        score +=3;
+    }
+    
     if (sameColor) {
         score += 3;
     }
+    
     if (sameFigure) {
         score += 3;
     }
+    
     if  (sameShading) {
         score += 3;
     }
-//    if ((!sameColor && !sameFigure && !sameShading)) {
-//        score += 9;
-//    }
-    //NSLog(@"Match score: %d",score);
+
     return score;
 }
 

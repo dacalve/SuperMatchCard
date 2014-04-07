@@ -13,7 +13,7 @@
 @property (nonatomic) NSUInteger number; //1,2,3
 @property (strong, nonatomic) UIColor *color; //red, green, purple
 @property (strong, nonatomic) NSString *figure; //circle, square, triangle
-@property (nonatomic) NSString *shade; //number of shapes (solid, striped, nonfilled)
+@property (strong, nonatomic) NSString *shade; //number of shapes (solid, striped, nonfilled)
 
 +(NSUInteger)maxNumber;
 +(NSArray *)validFigures;

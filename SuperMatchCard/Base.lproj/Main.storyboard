@@ -94,7 +94,7 @@
                     </view>
                     <navigationItem key="navigationItem" id="fJB-ZH-5XQ"/>
                     <connections>
-                        <outlet property="boundingView" destination="Vur-iB-KP0" id="fTQ-cG-VAd"/>
+                        <outlet property="boundingView" destination="Vur-iB-KP0" id="WAA-Qi-ykY"/>
                         <outlet property="scoreLabel" destination="zy4-kR-Fiy" id="kLv-cN-a0q"/>
                     </connections>
                 </viewController>
@@ -159,7 +159,7 @@
                     </view>
                     <navigationItem key="navigationItem" id="32a-26-uLl"/>
                     <connections>
-                        <outlet property="boundingView" destination="gZw-mz-rce" id="DxO-2y-HkL"/>
+                        <outlet property="boundingView" destination="gZw-mz-rce" id="RQf-lw-fBt"/>
                         <outlet property="scoreLabel" destination="Hcd-qA-eQO" id="lTt-jw-F2A"/>
                     </connections>
                 </viewController>

@@ -36,8 +36,36 @@
 
 #define NUMBER_OF_PLAYING_CARDS 12
 #define DEFAULT_SCALE_FACTOR 0.86
+#define PLAYING_CARD_ASPECT_RATIO 0.75
+#define NUMBER_OF_CARDS_TO_MATCH 2
 
 static const CGSize DROP_SIZE = { 60, 80 };
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.aspectRatio = PLAYING_CARD_ASPECT_RATIO;
+    self.numberOfCards = NUMBER_OF_PLAYING_CARDS;
+	// Do any additional setup after loading the view, typically from a nib.
+    [self.boundingView addGestureRecognizer:[[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinch:)]];
+    
+    self.panner = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
+    
+    self.gatherPoint = CGPointMake(self.boundingView.bounds.size.width/2, self.boundingView.bounds.size.height/2);
+}
+
+- (void)willRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+    NSLog(@"from portrait:%i  from landscape:%i",fromInterfaceOrientation == UIDeviceOrientationPortrait, fromInterfaceOrientation == UIDeviceOrientationLandscapeRight);
+}
+
+- (IBAction)deal:(id)sender
+{
+    NSMutableArray *pointsToReplace = [self getAllPointsToReplace];
+    [self replaceCards:pointsToReplace];
+    self.game = nil;
+    [self updateUI];
+}
 
 - (CGFloat)scaleFactor
 {
@@ -67,34 +95,6 @@ static const CGSize DROP_SIZE = { 60, 80 };
 {
     if (!_deck) _deck = [[PlayingCardDeck alloc] init];
     return _deck;
-}
-
-- (Grid *)portraitGrid
-{
-    if (!_portraitGrid) {
-        _portraitGrid = [[Grid alloc] init];
-        _portraitGrid.cellAspectRatio = 0.75;//testing 60/80
-        _portraitGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-        _portraitGrid.minimumNumberOfCells = NUMBER_OF_PLAYING_CARDS;
-    }
-    return _portraitGrid;
-}
-
-- (Grid *)landscapeGrid
-{
-    if (!_landscapeGrid) {
-        _landscapeGrid = [[Grid alloc] init];
-        _landscapeGrid.cellAspectRatio = 0.75;
-        _landscapeGrid.size = CGSizeMake(self.boundingView.bounds.size.width, self.boundingView.bounds.size.height);
-        _landscapeGrid.minimumNumberOfCells = NUMBER_OF_PLAYING_CARDS;
-    }
-    return _landscapeGrid;
-}
-
-- (IBAction)deal:(id)sender
-{
-    NSMutableArray *pointsToReplace = [self getAllPointsToReplace];
-    [self replaceCards:pointsToReplace];
 }
 
 - (void)replaceCards:(NSMutableArray *)pointsToReplace
@@ -133,23 +133,21 @@ static const CGSize DROP_SIZE = { 60, 80 };
 
 - (void)drawRandomPlayingCard:(PlayingCardView *)cardView
 {
-    Card *card = [self.deck drawRandomCard];
-    if ([card isKindOfClass:[PlayingCard class]]) {
-        PlayingCard *playingCard = (PlayingCard *)card;
-        cardView.rank = playingCard.rank;
-        cardView.suit = playingCard.suit;
+    if (!cardView.card.rank) {
+        Card *card = [self.deck drawRandomCard];
+        if ([card isKindOfClass:[PlayingCard class]]) {
+            PlayingCard *playingCard = (PlayingCard *)card;
+            cardView.card = playingCard;
+//            cardView.rank = playingCard.rank;
+//            cardView.suit = playingCard.suit;
+        }
     }
 }
 
 - (IBAction)swipe:(UISwipeGestureRecognizer *)sender
 {
-    PlayingCardView *cardView = (PlayingCardView *)(sender.view);
-    if (cardView) {
-        if (!cardView.faceUp)
-        {
-            [self drawRandomPlayingCard:cardView];
-        }
-        [self animateFlip:cardView];
+    if (sender.state == UIGestureRecognizerStateEnded) {
+        [self transitionCardSelection:sender];
     }
 }
 
@@ -164,11 +162,18 @@ static const CGSize DROP_SIZE = { 60, 80 };
         [self animateFlip:cardView];
         
     }
-    
 }
 
 - (void)animateFlip:(PlayingCardView *)cardView
 {
+    
+    NSMutableArray *workingCardViews = [[NSMutableArray alloc] init];
+    for (PlayingCardView *playingCardView in self.boundingView.subviews) {
+        if (playingCardView.isFaceUp) {
+            [workingCardViews addObject:playingCardView];
+        }
+    }
+    
     [UIView transitionWithView:cardView
                       duration:.75
                        options:UIViewAnimationOptionTransitionFlipFromLeft | UIViewAnimationCurveEaseIn
@@ -176,9 +181,85 @@ static const CGSize DROP_SIZE = { 60, 80 };
                         cardView.faceUp = !cardView.faceUp;
                     }
                     completion:^(BOOL finished) {
-                        // cleanup viewOld
+                        if (finished && cardView.faceUp){
+                            [self completeSelectedCardTransition:workingCardViews withCardView:cardView];
+                            
+                        }
                     }
      ];
+}
+
+- (void)completeSelectedCardTransition:(NSMutableArray *)workingCardViews withCardView:(PlayingCardView *)cardView
+{
+    if ([workingCardViews count] != NUMBER_OF_CARDS_TO_MATCH - 1) {
+        return; //Don't do anything until number of cards to match is selected.
+    }
+    NSMutableArray *cards = [[NSMutableArray alloc] init];
+    for (PlayingCardView *view in workingCardViews) {
+        [cards addObject:view.card];
+    }
+    [self.game match:cards withCard:cardView.card];
+    
+    
+    if (self.game.lastScore > 0) {
+        //replace cardviews with new cardviews
+        [workingCardViews addObject:cardView];//add currently selected card to cards to replace.
+        for (PlayingCardView *playingCardView in workingCardViews) {
+            CGRect replaceFrame = playingCardView.frame;
+            [self removeCardView:playingCardView];
+            //Add a new card to the existing frame
+            [self dropWithFrame:replaceFrame]; //will the view remain in memory if I use its frame?
+        }
+        
+    } else {
+        //if 3 cards selected, unselect all cards
+        [self unselectCards:workingCardViews];
+        NSLog(@"Not a match!");
+    }
+    //update scoreLabel
+    [self updateUI];
+}
+
+- (void)removeCardView:(UIView *)viewToRemove
+{
+    if ([viewToRemove isKindOfClass:[PlayingCardView class]]) {
+        [UIView transitionWithView:viewToRemove
+                          duration:.75
+                           options:UIViewAnimationOptionCurveEaseIn
+                        animations:^{
+                            CGPoint vanishingPoint = CGPointMake(50.0, -50.0);
+                            viewToRemove.center = vanishingPoint;
+                        }
+                        completion:^(BOOL finished) {
+                            [viewToRemove removeFromSuperview];
+                        }
+         ];
+    }
+}
+
+- (void)unselectCards:(NSMutableArray *)workingCardViews
+{
+    for (UIView *view in workingCardViews) {
+        if ([view isKindOfClass:[PlayingCardView class]]) {
+            
+            PlayingCardView *playingCardView = (PlayingCardView *)view;
+            
+            if (playingCardView.isFaceUp) {
+                [UIView transitionWithView:playingCardView
+                                  duration:.75
+                                   options:UIViewAnimationOptionTransitionFlipFromLeft | UIViewAnimationCurveEaseIn
+                                animations:^{
+                                    playingCardView.faceUp = !playingCardView.faceUp;
+                                }
+                                completion:^(BOOL finished) {
+                                    playingCardView.chosen = NO;
+                                    playingCardView.card.chosen = NO;
+                                    playingCardView.card.matched = NO;
+                                }
+                 ];
+            }
+        }
+    }
 }
 
 - (void)pinch:(UIPinchGestureRecognizer *)sender
@@ -234,61 +315,18 @@ static const CGSize DROP_SIZE = { 60, 80 };
     }
 }
 
-- (void)viewDidLoad
+- (void)transitionCardSelection:(UISwipeGestureRecognizer *)sender
 {
-    [super viewDidLoad];
-	// Do any additional setup after loading the view, typically from a nib.
-    [self.boundingView addGestureRecognizer:[[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinch:)]];
+    PlayingCardView *cardView = (PlayingCardView *)(sender.view);
     
-    self.panner = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
-    
-    self.gatherPoint = CGPointMake(self.boundingView.bounds.size.width/2, self.boundingView.bounds.size.height/2);
-}
-
-- (void)willRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
-{
-    NSLog(@"from portrait:%i  from landscape:%i",fromInterfaceOrientation == UIDeviceOrientationPortrait, fromInterfaceOrientation == UIDeviceOrientationLandscapeRight);
-}
-
-- (void)viewDidLayoutSubviews
-{
-    NSLog(@"Layout subviews! bounds.width=%f, bounds.height=%f", self.boundingView.bounds.size.width,self.boundingView.bounds.size.height);
-    NSLog(@"orientation=%d",[UIApplication sharedApplication].statusBarOrientation);
-    if ([self.boundingView.subviews count] == 0) {
-        [self createPlayingCardViews];
-        return;
-    }
-    self.grid = [self createGrid];
-    NSLog(@"min#ofcells=%i,rowcount=%i,colcount=%i", self.grid.minimumNumberOfCells,self.grid.rowCount, self.grid.columnCount);
-    if (self.grid.inputsAreValid) {
-    
-        int count = 0;
-        for (PlayingCardView *view in self.boundingView.subviews) {
-            int row = count/self.grid.columnCount;
-            int col = count%self.grid.columnCount;
-            [self movePlayingCardView:view toRow:row andColumn:col];
-            count++;
+    if (cardView) {
+        
+        if (!cardView.faceUp)
+        {
+            [self drawRandomPlayingCard:cardView];
         }
-    } else {
-        NSLog(@"Inputs are not valid.");
+        [self animateFlip:cardView];
     }
-}
-
-- (void)movePlayingCardView:(UIView*)view toRow:(int)row andColumn:(int)col
-{
-    NSLog(@"This is row:%i col:%i rowcount:%i colcount:%i",row,col,self.grid.rowCount, self.grid.columnCount);
-    CGRect frame = [self.grid frameOfCellAtRow:row inColumn:col];
-
-    [UIView transitionWithView:view
-                      duration:1.0
-                       options:UIViewAnimationOptionCurveEaseIn
-                    animations:^{
-                        view.frame = frame;
-                    }
-                    completion:^(BOOL finished) {
-                        
-                    }
-     ];
 }
 
 - (void)movePlayingCardViewToCenter:(UIView*)view toRow:(int)row andColumn:(int)col
@@ -305,19 +343,6 @@ static const CGSize DROP_SIZE = { 60, 80 };
                         // cleanup viewOld
                     }
      ];
-}
-
-- (void)createPlayingCardViews
-{
-    self.grid = [self createGrid];
-    if (self.grid.inputsAreValid) {
-        for (NSUInteger row = 0; row < self.grid.rowCount; row++) {
-            for (NSUInteger col = 0; col < self.grid.columnCount; col++) {
-                [self dropWithFrame:[self.grid frameOfCellAtRow:row inColumn:col]];
-            }
-        }
-    }
-    self.initialCount = self.grid.rowCount * self.grid.columnCount;
 }
 
 - (Grid *)createGrid
@@ -392,12 +417,6 @@ static const CGSize DROP_SIZE = { 60, 80 };
 }
 
 #pragma mark - C Functions
-
-struct NSIntegerPoint {
-    NSInteger x;
-    NSInteger y;
-};
-typedef struct NSIntegerPoint NSIntegerPoint;
 
 CG_INLINE NSIntegerPoint
 NSIntegerPointMake(NSInteger x, NSInteger y)
